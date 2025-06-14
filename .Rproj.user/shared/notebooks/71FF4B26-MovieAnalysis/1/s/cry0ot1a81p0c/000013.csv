@@ -1,0 +1,5 @@
+"0","# f. Pipe (already used above, but one more example)"
+"0","comedy_movies_avg_votes <- imdb %>%"
+"0","  filter(str_detect(Genre, ""Comedy"")) %>%"
+"0","  summarize(Avg_Votes = mean(No_of_Votes, na.rm=TRUE))"
+"0","print(comedy_movies_avg_votes)"

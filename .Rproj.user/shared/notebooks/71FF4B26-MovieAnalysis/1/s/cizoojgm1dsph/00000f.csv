@@ -1,0 +1,17 @@
+"0","# b. List"
+"0","movie_list <- list("
+"0","  title = imdb$Series_Title[1],"
+"0","  rating = imdb$IMDB_Rating[1],"
+"0","  genre = imdb$Genre[1]"
+"0",")"
+"0","print(movie_list)"
+"1","$title
+[1] ""The Shawshank Redemption""
+
+$rating
+[1] 9.3
+
+$genre
+[1] ""Drama""
+
+"

@@ -1,0 +1,7 @@
+"0","# a. Vector"
+"0","genre_vec <- imdb$Genre[1:10]"
+"0","print(genre_vec)"
+"1"," [1] ""Drama""                     ""Crime, Drama""              ""Action, Crime, Drama""      ""Crime, Drama""             
+ [5] ""Crime, Drama""              ""Action, Adventure, Drama""  ""Crime, Drama""              ""Biography, Drama, History""
+ [9] ""Action, Adventure, Sci-Fi"" ""Drama""                    
+"

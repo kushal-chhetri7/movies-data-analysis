@@ -1,0 +1,5 @@
+"0","# d. Mutate (create a new column: Rating Level)"
+"0","imdb <- imdb %>% mutate(Rating_Level = ifelse(IMDB_Rating >= 8.5, ""Excellent"", "
+"0","                                              ifelse(IMDB_Rating >= 8, ""Good"", ""Average"")))"
+"0",""
+"0","print(imdb)"

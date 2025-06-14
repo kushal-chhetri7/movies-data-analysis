@@ -1,0 +1,3 @@
+"0","# a. Arrange (by rating)"
+"0","top_rated <- imdb %>% arrange(desc(IMDB_Rating))"
+"0","head(top_rated, 3)"

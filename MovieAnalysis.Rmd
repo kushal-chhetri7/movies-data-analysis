@@ -1,0 +1,609 @@
+---
+title: "Group_3_RProject"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(highcharter)
+library(gt)
+library(htmltools)
+library(viridis)
+library(dplyr)
+```
+
+A) {Loading and Exploring Dataset}
+-----------------------------------------------------------------------
+
+```{r}
+imdb <- read.csv("imdb_top_1000.csv", stringsAsFactors = FALSE)
+str(imdb)
+summary(imdb)
+head(imdb)
+```
+
+
+# B)  Demonstrating R Data Structures 
+-----------------------------------------------------------------------
+
+```{r}
+# a. Vector
+genre_vec <- imdb$Genre[1:10]
+print(genre_vec)
+
+```
+
+
+```{r}
+# b. List
+movie_list <- list(
+  title = imdb$Series_Title[1],
+  rating = imdb$IMDB_Rating[1],
+  genre = imdb$Genre[1]
+)
+print(movie_list)
+
+```
+
+
+```{r}
+# c. Array
+rating_array <- array(imdb$IMDB_Rating[1:24], dim = c(4, 3, 2))
+print(rating_array)
+
+```
+
+```{r}
+# d. Matrix
+votes_matrix <- matrix(imdb$No_of_Votes[1:12], nrow = 4)
+print(votes_matrix)
+
+```
+
+
+
+
+```{r}
+# e. Data Frame
+sample_df <- imdb[1:10, c("Series_Title", "Genre", "IMDB_Rating")]
+print(sample_df)
+
+```
+
+# C)  dplyr Operations 
+
+
+```{r}
+# a. Arrange (by rating)
+top_rated <- imdb %>% arrange(desc(IMDB_Rating))
+head(top_rated, 3)
+
+```
+
+
+```{r}
+# b. Filter (filter by genre)
+action_movies <- imdb %>% filter(str_detect(Genre, "Action"))
+head(action_movies, 3)
+
+```
+
+
+
+```{r}
+# c. Slice (get 10th-15th movies)
+sliced_movies <- imdb %>% slice(10:15)
+print(sliced_movies)
+
+```
+
+
+
+```{r}
+# d. Mutate (create a new column: Rating Level)
+imdb <- imdb %>% mutate(Rating_Level = ifelse(IMDB_Rating >= 8.5, "Excellent", 
+                                              ifelse(IMDB_Rating >= 8, "Good", "Average")))
+
+print(imdb)
+
+```
+
+
+
+```{r}
+# e. Summarize (average rating by genre)
+avg_rating_by_genre <- imdb %>%
+  separate_rows(Genre, sep = ", ") %>%
+  group_by(Genre) %>%
+  summarize(Avg_Rating = mean(IMDB_Rating, na.rm=TRUE),
+            Count = n()) %>%
+  arrange(desc(Avg_Rating))
+head(avg_rating_by_genre)
+
+```
+
+
+
+```{r}
+# f. Pipe (already used above, but one more example)
+comedy_movies_avg_votes <- imdb %>%
+  filter(str_detect(Genre, "Comedy")) %>%
+  summarize(Avg_Votes = mean(No_of_Votes, na.rm=TRUE))
+print(comedy_movies_avg_votes)
+
+```
+
+
+# D) Visualization  
+
+
+
+```{r}
+
+# Box Plot (IMDB Rating by Genre)
+library(dplyr)
+library(tidyr)
+library(highcharter)
+library(viridis)
+
+# Prepare the data: Each genre as a row
+imdb_genres <- imdb %>%
+  tidyr::separate_rows(Genre, sep = ", ")
+
+# Compute boxplot stats for each genre (sorted by median for clarity)
+box_stats <- imdb_genres %>%
+  group_by(Genre) %>%
+  summarise(
+    low = min(IMDB_Rating, na.rm = TRUE),
+    q1 = quantile(IMDB_Rating, 0.25, na.rm = TRUE),
+    median = median(IMDB_Rating, na.rm = TRUE),
+    q3 = quantile(IMDB_Rating, 0.75, na.rm = TRUE),
+    high = max(IMDB_Rating, na.rm = TRUE)
+  ) %>%
+  arrange(desc(median))
+
+# Format data for highcharter
+box_data <- purrr::transpose(as.list(box_stats[, c("low", "q1", "median", "q3", "high")]))
+
+# Minimal and modern box plot
+highchart() %>%
+  hc_chart(type = "boxplot") %>%
+  hc_add_series(
+    name = "IMDB Rating",
+    data = box_data,
+    color = "#E74C3C",     # Modern viridis blue-green
+    fillColor = "#E2EAF2",   # Gentle box fill
+    lineWidth = 2
+  ) %>%
+  hc_xAxis(
+    categories = box_stats$Genre,
+    title = list(text = "Genre"),
+    labels = list(rotation = 45, style = list(fontSize = "13px"))
+  ) %>%
+  hc_yAxis(
+    title = list(text = "IMDB Rating"),
+    min = floor(min(box_stats$low)),
+    max = ceiling(max(box_stats$high))
+  ) %>%
+  hc_title(
+    text = "IMDB Rating by Genre",
+    style = list(fontSize = "22px", fontWeight = "bold", color = "#22223b")
+  ) %>%
+  hc_tooltip(
+    headerFormat = "<b>{point.key}</b><br>",
+    pointFormat = "Min: {point.low}<br>Q1: {point.q1}<br>Median: {point.median}<br>Q3: {point.q3}<br>Max: {point.high}"
+  ) %>%
+  hc_add_theme(hc_theme_flat()) %>%
+  hc_credits(enabled = FALSE)
+
+```
+
+
+
+```{r}
+# Pie Chart (Rating Level)
+library(highcharter)
+library(dplyr)
+library(viridis)
+
+# Prepare the data
+rating_dist <- imdb %>%
+  group_by(Rating_Level) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+# Create a list of named values for highcharter
+pie_data <- list_parse2(
+  rating_dist %>% mutate(name = Rating_Level, y = count) %>% select(name, y)
+)
+
+# Generate colors
+custom_colors <- viridis::mako(n = nrow(rating_dist))
+
+# Create highcharter pie chart properly
+highchart() %>%
+  hc_chart(type = "pie") %>%
+  hc_add_series(
+    name = "Rating Distribution",
+    data = pie_data,
+    colorByPoint = TRUE,
+    colors = custom_colors
+  ) %>%
+  hc_title(
+    text = "Distribution of Rating Levels",
+    style = list(fontSize = '15px', fontWeight = 'bold')
+  ) %>%
+  hc_tooltip(pointFormat = '<b>Proportion: </b> {point.percentage:.2f}%') %>%
+  hc_add_theme(hc_theme_google()) %>%
+  hc_credits(enabled = TRUE, text = '@group3')
+
+
+```
+
+
+
+```{r}
+# Bar Chart (Top 10 Directors by # of Movies)
+top_directors <- imdb %>%
+  group_by(Director) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n)) %>%
+  slice_head(n = 10)
+
+custom_colors <- viridis::mako(n = 10)
+
+highchart() %>%
+  hc_chart(type = "bar") %>%
+  hc_add_series(
+    data = top_directors$n,
+    name = "Number of Movies",
+    colorByPoint = TRUE,
+    colors = custom_colors
+  ) %>%
+  hc_xAxis(
+    categories = top_directors$Director,
+    title = list(text = "Director")
+  ) %>%
+  hc_yAxis(
+    title = list(text = "Number of Movies")
+  ) %>%
+  hc_title(
+    text = "Top 10 Directors by Number of Movies",
+    style = list(fontSize = "25px", fontWeight = "bold")
+  ) %>%
+  hc_subtitle(
+    text = "Ranked by Film Count",
+    style = list(fontSize = "16px")
+  ) %>%
+  hc_tooltip(pointFormat = "<b>Movies Directed: </b> {point.y}") %>%
+  hc_add_theme(hc_theme_google()) %>%
+  hc_credits(enabled = TRUE, text = "@group3")
+
+```
+
+
+
+```{r}
+# Line Chart (Yearly Average Rating)
+library(highcharter)
+library(dplyr)
+
+# Ensure year is numeric
+imdb$Released_Year <- as.numeric(imdb$Released_Year)
+
+# Prepare the data
+avg_rating_year <- imdb %>%
+  group_by(Released_Year) %>%
+  summarize(Avg_Rating = mean(IMDB_Rating, na.rm = TRUE)) %>%
+  arrange(Released_Year)
+
+# Create the highcharter line chart with focused Y-axis
+highchart() %>%
+  hc_chart(type = "line") %>%
+  hc_add_series(
+    data = avg_rating_year$Avg_Rating,
+    name = "Average Rating",
+    color = "#E74C3C",
+    marker = list(enabled = TRUE, radius = 4)
+  ) %>%
+  hc_xAxis(
+    categories = avg_rating_year$Released_Year,
+    title = list(text = "Year")
+  ) %>%
+  hc_yAxis(
+    title = list(text = "Average Rating"),
+    min = 7.5,
+    max = 8.5
+  ) %>%
+  hc_title(
+    text = "Yearly Average IMDB Rating",
+    style = list(fontSize = "25px", fontWeight = "bold")
+  ) %>%
+  hc_subtitle(
+    text = "Based on All Available Movies by Year",
+    style = list(fontSize = "16px")
+  ) %>%
+  hc_tooltip(
+    pointFormat = "<b>Year:</b> {point.category} <br><b>Avg Rating:</b> {point.y:.2f}"
+  ) %>%
+  hc_add_theme(hc_theme_google()) %>%
+  hc_credits(enabled = TRUE, text = "@group3")
+
+```
+
+
+
+```{r}
+# Histogram (IMDB Ratings)
+# Prepare histogram data
+breaks <- seq(floor(min(imdb$IMDB_Rating, na.rm=TRUE)),
+              ceiling(max(imdb$IMDB_Rating, na.rm=TRUE)), 
+              by = 0.2)
+hist_data <- hist(imdb$IMDB_Rating, breaks = breaks, plot = FALSE)
+custom_hist_colors <- viridis::mako(length(hist_data$counts))
+
+highchart() %>%
+  hc_chart(type = "column") %>%
+  hc_add_series(
+    data = hist_data$counts,
+    name = "Count",
+    colorByPoint = TRUE,
+    colors = custom_hist_colors,
+    pointPadding = 0,      
+    groupPadding = 0        
+  ) %>%
+  hc_xAxis(
+    categories = round(hist_data$mids, 2),
+    title = list(text = "IMDB Rating")
+  ) %>%
+  hc_yAxis(
+    title = list(text = "Count")
+  ) %>%
+  hc_title(
+    text = "Distribution of IMDB Ratings",
+    style = list(fontSize = "25px", fontWeight = "bold", color = "#39ff14")
+  ) %>%
+  hc_subtitle(
+    text = "Neon Theme • Interactive Histogram",
+    style = list(fontSize = "16px", color = "#00f0ff")
+  ) %>%
+  hc_tooltip(pointFormat = "<b>Rating: </b> {point.category} <br><b>Count: </b> {point.y}") %>%
+  hc_add_theme(hc_theme_google()) %>%
+  hc_credits(enabled = TRUE, text = "@group3")
+```
+
+
+
+# E) Dashboard  
+
+```{r}
+library(shiny)
+library(dplyr)
+library(stringr)
+library(highcharter)
+library(viridis)
+library(tidyr)
+library(bslib)
+
+# Helper: assign rating levels for pie chart
+get_rating_level <- function(rating) {
+  if (rating >= 9) return("Excellent")
+  if (rating >= 8) return("Great")
+  if (rating >= 7) return("Good")
+  return("Others")
+}
+imdb$Rating_Level <- sapply(imdb$IMDB_Rating, get_rating_level)
+
+# Unique genres for dropdown
+all_genres <- sort(unique(unlist(strsplit(paste(imdb$Genre, collapse = ", "), ", "))))
+
+ui <- fluidPage(
+  theme = bs_theme(
+    version = 5,
+    bootswatch = "flatly",
+    base_font = font_google("Roboto"),
+    primary = "#21908CFF"
+  ),
+  tags$head(tags$style(HTML("
+    body { background: #16171c; }
+    .main-panel { background: #16171c; }
+    .chart-container { 
+      background: #212226; 
+      border-radius: 12px; 
+      padding: 10px; 
+      margin-bottom: 15px;
+      
+    }
+    .well, .panel, .form-control { border-radius: 6px; }
+    .highcharts-title, .highcharts-subtitle {
+      font-family: 'Roboto', sans-serif;
+      font-weight: 500;
+      color: #ffffff !important;
+    }
+  "))),
+  titlePanel(
+    div(
+      style="color:#ffffff; font-family: 'Roboto', sans-serif; font-size:32px; font-weight:600;",
+    )
+  ),
+  sidebarLayout(
+    sidebarPanel(
+      selectizeInput(
+        "genreInput", "Select Genre:",
+        choices = all_genres,
+        selected = "Drama",
+        options = list(
+          placeholder = "Type or select a genre...",
+          maxOptions = 30
+        )
+      ),
+      sliderInput(
+        "ratingInput", "IMDB Rating:",
+        min = 7, max = 10, value = c(8, 10), step = 0.1
+      ),
+      style = "background-color: #212226; color: #ffffff; border-radius: 8px; margin-bottom: 12px;"
+    ),
+    mainPanel(
+      fluidRow(
+        column(6, 
+          div(class = "chart-container", highchartOutput("barPlot", height = "400px"))
+        ),
+        column(6, 
+          div(class = "chart-container", highchartOutput("linePlot", height = "400px"))
+        )
+      ),
+      fluidRow(
+        column(6, 
+          div(class = "chart-container", highchartOutput("histPlot", height = "400px"))
+        ),
+        column(6, 
+          div(class = "chart-container", highchartOutput("piePlot", height = "400px"))
+        )
+      )
+    )
+  )
+)
+
+server <- function(input, output) {
+  genre_filtered <- reactive({
+    imdb %>%
+      filter(str_detect(Genre, fixed(input$genreInput))) %>%
+      filter(IMDB_Rating >= input$ratingInput[1], IMDB_Rating <= input$ratingInput[2])
+  })
+  
+  output$barPlot <- renderHighchart({
+    top_directors <- genre_filtered() %>%
+      group_by(Director) %>%
+      summarize(n = n()) %>%
+      arrange(desc(n)) %>%
+      slice_head(n=10)
+    custom_colors <- viridis::viridis(10, option = "D", end = 0.85)
+    highchart() %>%
+      hc_chart(type = "bar", backgroundColor = "#212226") %>%
+      hc_add_series(
+        data = top_directors$n,
+        name = "Number of Movies",
+        colorByPoint = TRUE,
+        colors = custom_colors,
+        borderColor = "none",
+        borderWidth = 0
+      ) %>%
+      hc_xAxis(
+        categories = top_directors$Director,
+        title = list(text = "Director", style = list(color = "#ffffff")),
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#212226"
+      ) %>%
+      hc_yAxis(
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#333333"
+      ) %>%
+      hc_title(text = paste("Top Directors in", input$genreInput), style = list(color = "white")) %>%
+      hc_add_theme(hc_theme_flat())
+  })
+  
+  output$linePlot <- renderHighchart({
+    avg_rating_year <- genre_filtered() %>%
+      group_by(Released_Year) %>%
+      summarize(Avg_Rating = mean(IMDB_Rating, na.rm=TRUE))
+    highchart() %>%
+      hc_chart(type = "line", backgroundColor = "#212226") %>%
+      hc_add_series(
+        data = avg_rating_year$Avg_Rating,
+        name = "Average Rating",
+        color = "#00b374"  # Neon blue color
+      ) %>%
+      hc_xAxis(
+        categories = avg_rating_year$Released_Year,
+        title = list(text = "Year", style = list(color = "#ffffff")),
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#333333"
+      ) %>%
+      hc_yAxis(
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#212226"
+      ) %>%
+      hc_title(text = paste("Yearly Avg Rating for", input$genreInput), style = list(color = "white")) %>%
+      hc_add_theme(hc_theme_flat())
+  })
+  
+  output$histPlot <- renderHighchart({
+    req(nrow(genre_filtered()) > 0)
+    breaks <- seq(floor(min(genre_filtered()$IMDB_Rating, na.rm=TRUE)),
+                  ceiling(max(genre_filtered()$IMDB_Rating, na.rm=TRUE)), by = 0.2)
+    hist_data <- hist(genre_filtered()$IMDB_Rating, breaks = breaks, plot = FALSE)
+    custom_hist_colors <- viridis::viridis(length(hist_data$counts), option = "D", end = 0.85)
+    highchart() %>%
+      hc_chart(type = "column", backgroundColor = "#212226") %>%
+      hc_add_series(
+        data = hist_data$counts,
+        name = "Count",
+        colorByPoint = TRUE,
+        colors = custom_hist_colors,
+        borderColor = "none",
+        borderWidth = 0,
+        pointPadding = 0,
+        groupPadding = 0
+      ) %>%
+      hc_xAxis(
+        categories = round(hist_data$mids, 2),
+        title = list(text = "IMDB Rating", style = list(color = "#ffffff")),
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#333333"
+      ) %>%
+      hc_yAxis(
+        title = list(text = "Count", style = list(color = "#ffffff")),
+        labels = list(style = list(color = "#ffffff")),
+        gridLineColor = "#212226"
+      ) %>%
+      hc_title(text = paste("Rating Distribution for", input$genreInput), style = list(color = "white")) %>%
+      hc_add_theme(hc_theme_flat())
+  })
+  
+  output$piePlot <- renderHighchart({
+  neon_cols <- c(
+    "Excellent" = "#cc353c",   
+    "Great"     = "#5e0414",   
+    "Good"      = "#c701ae",   
+    "Others"    = "#747474"    
+  )
+
+  dist <- genre_filtered() %>%
+    count(Rating_Level, name = "y") %>%
+    arrange(factor(Rating_Level, levels = names(neon_cols))) %>%
+    mutate(
+      name  = Rating_Level,
+      color = neon_cols[Rating_Level]
+    )
+
+  highchart() %>%
+    hc_chart(type = "pie", backgroundColor = "#212226") %>%
+    hc_add_series(
+      data = list_parse(dist),
+      colorByPoint = FALSE,
+      borderColor = "none",
+      borderWidth = 0
+    ) %>%
+    hc_title(
+      text  = paste("Rating Level Distribution in", input$genreInput),
+      style = list(color = "white")
+    ) %>%
+    hc_add_theme(hc_theme_flat())
+  })
+
+
+
+}
+
+shinyApp(ui, server)
+
+```
+
+
+
+
+

@@ -1,0 +1,3 @@
+"0","# e. Data Frame"
+"0","sample_df <- imdb[1:10, c(""Series_Title"", ""Genre"", ""IMDB_Rating"")]"
+"0","print(sample_df)"

@@ -1,0 +1,8 @@
+"0","# e. Summarize (average rating by genre)"
+"0","avg_rating_by_genre <- imdb %>%"
+"0","  separate_rows(Genre, sep = "", "") %>%"
+"0","  group_by(Genre) %>%"
+"0","  summarize(Avg_Rating = mean(IMDB_Rating, na.rm=TRUE),"
+"0","            Count = n()) %>%"
+"0","  arrange(desc(Avg_Rating))"
+"0","head(avg_rating_by_genre)"

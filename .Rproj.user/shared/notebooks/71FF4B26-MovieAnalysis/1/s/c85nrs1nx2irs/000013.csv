@@ -1,0 +1,3 @@
+"0","# b. Filter (filter by genre)"
+"0","action_movies <- imdb %>% filter(str_detect(Genre, ""Action""))"
+"0","head(action_movies, 3)"

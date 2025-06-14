@@ -1,0 +1,3 @@
+"0","# c. Slice (get 10th-15th movies)"
+"0","sliced_movies <- imdb %>% slice(10:15)"
+"0","print(sliced_movies)"
