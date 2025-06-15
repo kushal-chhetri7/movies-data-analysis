@@ -1,0 +1,10 @@
+name: r-project
+title:
+username: kushal-movies-analysis
+account: kushal-movies-analysis
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 14936308
+bundleId: 10460953
+url: https://kushal-movies-analysis.shinyapps.io/r-project/
+version: 1
